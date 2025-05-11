@@ -45,3 +45,33 @@ xcopy "app\src\main\libs\*" "lib\" /E /I /Y
 start /min /wait WinRAR A -r app\build\outputs\apk\unaligned.apk "lib\*"
 
 echo Aligning APK ...
+call %ANDROID_SDK_ROOT%\build-tools\35.0.1\apksigner sign --ks mykeystore.jks --ks-pass:%KEYSTORE_PASSWORD% --out app\build\outputs\apk\%APKNAME%-signed.apk app\build\outputs\apk\%APKNAME%.apk
+if %errorlevel% neq 0 (
+    echo Error signing APK!
+    echo Error code: %errorlevel%
+    exit /b %errorlevel%
+)
+
+:: Delete temporary folder
+rmdir /s /q lib
+
+echo Deleting unnecessary files ...
+del /q "app\build\outputs\apk\%APKNAME%.apk"
+del /q "app\build\outputs\apk\%APKNAME%-signed.apk.idsig"
+del /q "app\build\outputs\apk\unaligned.apk"
+
+echo APK successfully created: app\build\outputs\apk\%APKNAME%-signed.apk
+
+:: Debug moment
+echo Clear logcat
+%ADB% logcat -c
+echo installing APK
+%ADB% install app\build\outputs\apk\%APKNAME%-signed.apk
+start /min timeout.exe 1
+echo Starting logging
+start %ADB% logcat -s flappy
+
+exit
+
+endlocal
+
